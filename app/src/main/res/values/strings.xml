@@ -1,0 +1,8 @@
+<resources>
+    <string name="app_name">PotHoleClickerClient</string>
+    <string name="choose_file">Choose file</string>
+    <string name="pothole">Pot Hole</string>
+    <string name="speed_bump">Speed Bump</string>
+    <string name="manhole">Manhole</string>
+    <string name="other">Other</string>
+</resources>
