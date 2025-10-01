@@ -1,6 +1,7 @@
 package com.example.potholeclickerclient;
 
 import android.Manifest;
+import android.annotation.SuppressLint;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
@@ -83,11 +84,11 @@ public class MainActivity extends AppCompatActivity {
         captureLocationAndSave(type, ts);
     }
 
+    @SuppressLint("MissingPermission")      // Permissions checked with hasLocationPermission
     private void captureLocationAndSave(String type, long ts) {
         if (!hasLocationPermission()) {
             Toast.makeText(this, "Location permission needed to save coordinates.", Toast.LENGTH_SHORT).show();
             ensureLocationPermission();
-            // Don’t save without coords; prompt user to set permission and try again.
             return;
         }
 
@@ -176,8 +177,8 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private boolean hasLocationPermission() {
-        return ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
-                || ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED;
+        return ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+                || ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED;
     }
 
     @Override
