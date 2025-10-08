@@ -8,6 +8,8 @@ import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Bundle;
 import android.view.View;
+import android.widget.ImageView;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.activity.EdgeToEdge;
@@ -16,8 +18,8 @@ import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.PopupMenu;
 import androidx.core.app.ActivityCompat;
-import androidx.core.content.ContextCompat;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
@@ -26,9 +28,8 @@ import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.location.Priority;
 import com.google.android.gms.tasks.CancellationTokenSource;
+import com.google.android.material.appbar.MaterialToolbar;
 
-import java.io.File;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -42,13 +43,45 @@ public class MainActivity extends AppCompatActivity {
     private static final String PREFS = "csv_prefs";
     private static final String KEY_CSV_URI = "csv_uri";
     private static final String FILE_DEFAULT_NAME = "logfile.csv";
+
+    private static final String KEY_DEVICE_ADDRESS = "device_address";
+
     private @Nullable Uri csvUri;
+
+    private TextView deviceName;
+    private ImageView playButton;
+    private TextView frameCounter;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         EdgeToEdge.enable(this);
         setContentView(R.layout.activity_main);
+
+        // ---Barrier.START OF MENU SETUP ---
+        ImageView settingsButton = findViewById(R.id.btnSettings);
+
+        // Set a listener to handle menu item clicks
+        settingsButton.setOnClickListener(v -> {
+            PopupMenu popup = new PopupMenu(MainActivity.this, v);
+            popup.getMenuInflater().inflate(R.menu.settings_popup_menu, popup.getMenu());
+
+            popup.setOnMenuItemClickListener(item -> {
+                int itemId = item.getItemId();
+
+                if(itemId == R.id.choose_file){
+                    createCsvLauncher.launch(FILE_DEFAULT_NAME);
+                } else if(itemId == R.id.select_device) {
+                    Intent intent = new Intent(this, DeviceListActivity.class);
+                    deviceListLauncher.launch(intent);
+                }
+
+                return false;
+            });
+
+            popup.show();
+        });
+        // --- END OF MENU SETUP ---
 
         fused = LocationServices.getFusedLocationProviderClient(this);
 
@@ -64,8 +97,9 @@ public class MainActivity extends AppCompatActivity {
         findViewById(R.id.btnManHole).setOnClickListener(l);
         findViewById(R.id.btnOther).setOnClickListener(l);
 
-        // Let user pick/create CSV (ensure your layout has a button with this id)
-        findViewById(R.id.btnChooseFile).setOnClickListener(v -> createCsvLauncher.launch(FILE_DEFAULT_NAME));
+        deviceName = findViewById(R.id.deviceName);
+        playButton = findViewById(R.id.playButton);
+        frameCounter = findViewById(R.id.frameCounter);
 
         ensureLocationPermission();
         ensureCsvChosen();
@@ -208,6 +242,23 @@ public class MainActivity extends AppCompatActivity {
                     csvUri = uri;
                     saveCsvUri(uri);
                     Toast.makeText(this, "CSV selected.", Toast.LENGTH_SHORT).show();
+                }
+            });
+
+    private final ActivityResultLauncher<Intent> deviceListLauncher =
+            registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), result -> {
+                if (result.getResultCode() == RESULT_OK && result.getData() != null) {
+                    Intent data = result.getData();
+                    String deviceName = data.getStringExtra(DeviceListActivity.EXTRA_DEVICE_NAME);
+                    String deviceAddress = data.getStringExtra(DeviceListActivity.EXTRA_DEVICE_ADDRESS);
+
+                    if (deviceName != null && deviceAddress != null) {
+                        Toast.makeText(this, "Device selected: " + deviceName, Toast.LENGTH_SHORT).show();
+                        this.deviceName.setText(deviceName);
+                        this.playButton.setVisibility(View.VISIBLE);
+                        this.frameCounter.setVisibility(View.VISIBLE);
+                        this.frameCounter.setText("0 frames");
+                    }
                 }
             });
 }

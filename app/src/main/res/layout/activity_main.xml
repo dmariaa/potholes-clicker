@@ -15,7 +15,8 @@
         app:contentInsetStart="0dp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent">
+        app:layout_constraintTop_toTopOf="parent"
+        >
 
         <androidx.constraintlayout.widget.ConstraintLayout
             android:layout_width="match_parent"
@@ -36,29 +37,49 @@
 
             <ImageView
                 android:id="@+id/logoRight"
-                android:layout_width="72dp"
-                android:layout_height="72dp"
-                android:layout_gravity="end|center_vertical"
-                android:layout_marginEnd="8dp"
+                android:layout_width="56dp"
+                android:layout_height="56dp"
+                android:layout_gravity="start|center_vertical"
+                android:layout_marginStart="8dp"
                 android:contentDescription="@string/app_name"
                 android:src="@mipmap/urjc_logo_foreground"
                 app:layout_constraintBottom_toBottomOf="parent"
-                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toEndOf="@id/logoLeft"
                 app:layout_constraintTop_toTopOf="parent" />
 
             <TextView
+                android:id="@+id/textView"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_gravity="center"
-                android:text="Pothole\nClicker App"
+                android:layout_marginStart="8dp"
+                android:layout_marginEnd="8dp"
+                android:text="@string/app_title"
                 android:textAlignment="center"
                 android:textColor="@android:color/white"
                 android:textSize="24sp"
                 android:textStyle="bold"
                 app:layout_constraintBottom_toBottomOf="parent"
-                app:layout_constraintEnd_toStartOf="@id/logoRight"
-                app:layout_constraintStart_toEndOf="@id/logoLeft"
+                app:layout_constraintEnd_toStartOf="@id/btnSettings"
+                app:layout_constraintStart_toEndOf="@id/logoRight"
                 app:layout_constraintTop_toTopOf="parent" />
+
+            <ImageView
+                android:id="@+id/btnSettings"
+                android:layout_width="56dp"
+                android:layout_height="56dp"
+                android:layout_marginEnd="16dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:clickable="true"
+                android:contentDescription="@string/settings"
+                android:focusable="true"
+                android:padding="8dp"
+                android:src="@drawable/ic_settings"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                app:tint="@android:color/white" />
+
         </androidx.constraintlayout.widget.ConstraintLayout>
     </com.google.android.material.appbar.MaterialToolbar>
 
@@ -67,32 +88,77 @@
         android:layout_height="0dp"
         android:layout_margin="4dp"
         android:columnCount="2"
-        android:rowCount="3"
+        android:rowCount="4"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/toolbar">
 
-        <Button
-            android:id="@+id/btnChooseFile"
+        <LinearLayout
             android:layout_width="0dp"
             android:layout_height="0dp"
             android:layout_row="0"
-            android:layout_rowWeight="0.3"
+            android:layout_column="0"
             android:layout_columnSpan="2"
-            android:layout_columnWeight="1"
+            android:layout_gravity="fill"
+            android:layout_rowWeight="0.20"
             android:layout_margin="8dp"
-            android:backgroundTint="#A0A0A0"
-            android:text="@string/choose_file"
-            android:textColor="@color/black"
-            android:textSize="30sp"
-            app:cornerRadius="0dp" />
+            android:orientation="horizontal">
+
+            <TextView
+                android:id="@+id/deviceName"
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:text="No sensor device selected"
+                android:textSize="24sp"
+                android:textColor="@color/black"
+                android:gravity="center_vertical"
+                />
+
+            <ImageView
+                android:id="@+id/playButton"
+                android:layout_marginStart="4dp"
+                android:layout_width="72dp"
+                android:layout_height="72dp"
+                android:layout_marginEnd="4dp"
+                android:src="@drawable/play_disabled"
+                android:layout_gravity="center_vertical"
+                app:tint="#ff0000"
+                app:cornerRadius="0dp"
+                android:visibility="gone"
+                />
+
+            <TextView
+                android:id="@+id/frameCounter"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:text="0 frames"
+                android:textSize="24sp"
+                android:textColor="@color/black"
+                android:gravity="center_vertical"
+                android:visibility="gone"
+                />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:layout_row="1"
+            android:layout_column="0"
+            android:layout_columnSpan="2"
+            android:layout_gravity="fill"
+            android:layout_rowWeight="0.2"
+            android:layout_margin="8dp"
+            android:orientation="horizontal">
+
+        </LinearLayout>
 
         <Button
             android:id="@+id/btnPotHole"
             android:layout_width="0dp"
             android:layout_height="0dp"
-            android:layout_row="1"
+            android:layout_row="2"
             android:layout_rowWeight="1"
             android:layout_column="0"
             android:layout_columnWeight="1"
@@ -106,7 +172,7 @@
             android:id="@+id/btnSpeedBump"
             android:layout_width="0dp"
             android:layout_height="0dp"
-            android:layout_row="1"
+            android:layout_row="2"
             android:layout_rowWeight="1"
             android:layout_column="1"
             android:layout_columnWeight="1"
@@ -120,7 +186,7 @@
             android:id="@+id/btnManHole"
             android:layout_width="0dp"
             android:layout_height="0dp"
-            android:layout_row="2"
+            android:layout_row="3"
             android:layout_rowWeight="1"
             android:layout_column="0"
             android:layout_columnWeight="1"
@@ -134,7 +200,7 @@
             android:id="@+id/btnOther"
             android:layout_width="0dp"
             android:layout_height="0dp"
-            android:layout_row="2"
+            android:layout_row="3"
             android:layout_rowWeight="1"
             android:layout_column="1"
             android:layout_columnWeight="1"
