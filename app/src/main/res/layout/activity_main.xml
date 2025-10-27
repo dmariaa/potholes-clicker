@@ -98,47 +98,38 @@
             android:layout_width="0dp"
             android:layout_height="0dp"
             android:layout_row="0"
+            android:layout_rowWeight="0.15"
             android:layout_column="0"
             android:layout_columnSpan="2"
             android:layout_gravity="fill"
-            android:layout_rowWeight="0.20"
-            android:layout_margin="8dp"
+            android:layout_marginStart="8dp"
+            android:layout_marginTop="0dp"
+            android:layout_marginEnd="8dp"
+            android:layout_marginBottom="0dp"
             android:orientation="horizontal">
 
             <TextView
                 android:id="@+id/deviceName"
-                android:layout_width="wrap_content"
+                android:layout_width="0dp"
                 android:layout_height="match_parent"
-                android:text="No sensor device selected"
-                android:textSize="24sp"
+                android:layout_weight="@integer/material_motion_duration_long_1"
+                android:gravity="fill_horizontal|center_vertical"
+                android:text="@string/no_sensor_device_selected"
                 android:textColor="@color/black"
-                android:gravity="center_vertical"
-                />
+                android:textSize="24sp" />
 
             <ImageView
                 android:id="@+id/playButton"
-                android:layout_marginStart="4dp"
-                android:layout_width="72dp"
-                android:layout_height="72dp"
-                android:layout_marginEnd="4dp"
-                android:src="@drawable/play_disabled"
-                android:layout_gravity="center_vertical"
-                app:tint="#ff0000"
-                app:cornerRadius="0dp"
-                android:visibility="gone"
-                />
-
-            <TextView
-                android:id="@+id/frameCounter"
-                android:layout_width="0dp"
+                android:layout_width="56dp"
                 android:layout_height="match_parent"
-                android:layout_weight="1"
-                android:text="0 frames"
-                android:textSize="24sp"
-                android:textColor="@color/black"
-                android:gravity="center_vertical"
-                android:visibility="gone"
-                />
+                android:layout_gravity="center_vertical"
+                android:layout_marginStart="4dp"
+                android:layout_marginTop="0dp"
+                android:layout_marginEnd="4dp"
+                android:layout_marginBottom="0dp"
+                android:src="@drawable/play_disabled"
+                app:cornerRadius="0dp"
+                app:tint="#ff0000" />
         </LinearLayout>
 
         <LinearLayout
@@ -148,13 +139,25 @@
             android:layout_column="0"
             android:layout_columnSpan="2"
             android:layout_gravity="fill"
-            android:layout_rowWeight="0.2"
-            android:layout_margin="8dp"
+            android:layout_rowWeight="0.15"
+            android:layout_marginStart="8dp"
+            android:layout_marginTop="8dp"
+            android:layout_marginEnd="8dp"
+            android:layout_marginBottom="0dp"
             android:orientation="horizontal">
-
+            <TextView
+                android:id="@+id/frameCounter"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:text="0 frames"
+                android:textSize="24sp"
+                android:textColor="@color/black"
+                android:gravity="center_vertical"
+                />
         </LinearLayout>
 
-        <Button
+        <androidx.constraintlayout.widget.ConstraintLayout
             android:id="@+id/btnPotHole"
             android:layout_width="0dp"
             android:layout_height="0dp"
@@ -162,13 +165,48 @@
             android:layout_rowWeight="1"
             android:layout_column="0"
             android:layout_columnWeight="1"
-            android:layout_margin="8dp"
-            android:backgroundTint="#D90B0B"
-            android:text="@string/pothole"
-            android:textSize="30sp"
-            app:cornerRadius="0dp" />
+            
+            android:layout_marginStart="8dp"
+            android:layout_marginTop="4dp"
+            android:layout_marginEnd="8dp"
+            android:layout_marginBottom="0dp"
 
-        <Button
+            android:background="#D90B0B"
+            app:cornerRadius="0dp"
+            android:clickable="true"
+            android:focusable="true"
+            android:foreground="?android:attr/selectableItemBackground"
+            >
+            
+            <TextView
+                android:id="@+id/pothole_text"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/pothole"
+                android:textColor="@android:color/white"
+                android:textSize="30sp"
+                app:layout_constraintBottom_toTopOf="@+id/pothole_counter"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintVertical_chainStyle="packed" />
+
+            <TextView
+                android:id="@+id/pothole_counter"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="0"
+                android:textColor="@android:color/white"
+                android:textSize="30sp"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@+id/pothole_text"
+                app:layout_constraintVertical_chainStyle="packed" />
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
+
+        <androidx.constraintlayout.widget.ConstraintLayout
             android:id="@+id/btnSpeedBump"
             android:layout_width="0dp"
             android:layout_height="0dp"
@@ -176,13 +214,47 @@
             android:layout_rowWeight="1"
             android:layout_column="1"
             android:layout_columnWeight="1"
-            android:layout_margin="8dp"
-            android:backgroundTint="#186581"
-            android:text="@string/speed_bump"
-            android:textSize="30sp"
-            app:cornerRadius="0dp" />
 
-        <Button
+            android:layout_marginStart="8dp"
+            android:layout_marginTop="4dp"
+            android:layout_marginEnd="8dp"
+            android:layout_marginBottom="0dp"
+
+            android:background="#186581"
+            app:cornerRadius="0dp"
+            android:clickable="true"
+            android:focusable="true"
+            android:foreground="?android:attr/selectableItemBackground">
+
+            <TextView
+                android:id="@+id/speed_bump_text"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/speed_bump"
+                android:textColor="@android:color/white"
+                android:textSize="30sp"
+                app:layout_constraintBottom_toTopOf="@+id/speedbump_counter"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintVertical_chainStyle="packed" />
+
+            <TextView
+                android:id="@+id/speedbump_counter"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="0"
+                android:textColor="@android:color/white"
+                android:textSize="30sp"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@+id/speed_bump_text"
+                app:layout_constraintVertical_chainStyle="packed" />
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
+
+        <androidx.constraintlayout.widget.ConstraintLayout
             android:id="@+id/btnManHole"
             android:layout_width="0dp"
             android:layout_height="0dp"
@@ -190,13 +262,47 @@
             android:layout_rowWeight="1"
             android:layout_column="0"
             android:layout_columnWeight="1"
-            android:layout_margin="8dp"
-            android:backgroundTint="#497533"
-            android:text="@string/manhole"
-            android:textSize="30sp"
-            app:cornerRadius="0dp" />
 
-        <Button
+            android:layout_marginStart="8dp"
+            android:layout_marginTop="4dp"
+            android:layout_marginEnd="8dp"
+            android:layout_marginBottom="0dp"
+
+            android:background="#497533"
+            app:cornerRadius="0dp"
+            android:clickable="true"
+            android:focusable="true"
+            android:foreground="?android:attr/selectableItemBackground">
+
+            <TextView
+                android:id="@+id/manhole_text"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/manhole"
+                android:textColor="@android:color/white"
+                android:textSize="30sp"
+                app:layout_constraintBottom_toTopOf="@+id/manhole_counter"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintVertical_chainStyle="packed" />
+
+            <TextView
+                android:id="@+id/manhole_counter"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="0"
+                android:textColor="@android:color/white"
+                android:textSize="30sp"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@+id/manhole_text"
+                app:layout_constraintVertical_chainStyle="packed" />
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
+
+        <androidx.constraintlayout.widget.ConstraintLayout
             android:id="@+id/btnOther"
             android:layout_width="0dp"
             android:layout_height="0dp"
@@ -204,11 +310,45 @@
             android:layout_rowWeight="1"
             android:layout_column="1"
             android:layout_columnWeight="1"
-            android:layout_margin="8dp"
-            android:backgroundTint="#642797"
-            android:text="@string/other"
-            android:textSize="30sp"
-            app:cornerRadius="0dp" />
+
+            android:layout_marginStart="8dp"
+            android:layout_marginTop="4dp"
+            android:layout_marginEnd="8dp"
+            android:layout_marginBottom="0dp"
+
+            android:background="#642797"
+            app:cornerRadius="0dp"
+            android:clickable="true"
+            android:focusable="true"
+            android:foreground="?android:attr/selectableItemBackground">
+
+            <TextView
+                android:id="@+id/other_text"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/other"
+                android:textColor="@android:color/white"
+                android:textSize="30sp"
+                app:layout_constraintBottom_toTopOf="@+id/other_counter"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintVertical_chainStyle="packed" />
+
+            <TextView
+                android:id="@+id/other_counter"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="0"
+                android:textColor="@android:color/white"
+                android:textSize="30sp"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@+id/other_text"
+                app:layout_constraintVertical_chainStyle="packed" />
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
 
     </GridLayout>
 

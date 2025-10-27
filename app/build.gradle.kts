@@ -3,7 +3,6 @@ plugins {
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.hilt.android)
-//    kotlin("kapt")
     alias(libs.plugins.ksp)
 }
 android {
@@ -23,7 +22,7 @@ android {
     }
 
     hilt {
-        enableAggregatingTask = true
+        enableAggregatingTask = false
     }
 
     buildTypes {
@@ -65,8 +64,6 @@ dependencies {
     // Hilt
     implementation(libs.hilt.android)
     ksp(libs.hilt.compiler)
-//    kapt(libs.hilt.compiler)
-
 
     implementation(libs.okhttp.logging)
     implementation(libs.retrofit.core)
@@ -76,12 +73,9 @@ dependencies {
     implementation(libs.androidx.room.ktx)
     implementation(libs.androidx.room.runtime)
 
-//    implementation(libs.javapoet)
-//    kapt(libs.javapoet)
-
     // ST Blue SDK
-    // implementation(libs.st.blue.sdk)
-    implementation(files("libs/st-blue-sdk-1.2.14.aar"))
+    implementation(libs.st.blue.sdk)
+    // implementation(files("libs/st-blue-sdk-1.2.14.aar"))
 
     // Google Play Services
     implementation(libs.play.services.location)
