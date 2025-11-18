@@ -76,17 +76,11 @@ class MainViewModel @Inject constructor(
     private val _isTracking = MutableLiveData<Boolean>(false)
     val isTracking: LiveData<Boolean> = _isTracking
 
-    private val _isDisconnecting = MutableLiveData<Boolean>(false)
-    val isDisconnecting: LiveData<Boolean> = _isDisconnecting
-
     fun onPlayStopClick() {
         if(_isTracking.value == true) {
-            _toastMessage.postValue("Stopping tracking, please wait...")
-            return
-        }
-
-        if(_isTracking.value == true) {
-            stopTracking()
+            viewModelScope.launch {
+                stopTracking()
+            }
         } else {
             startTracking()
         }
