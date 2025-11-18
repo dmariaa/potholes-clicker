@@ -5,75 +5,142 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.net.Uri;
+import android.provider.DocumentsContract;
 import android.widget.Toast;
 
-import androidx.activity.result.ActivityResultLauncher;
+import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.EnumMap;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Objects;
 
 public class CsvManager {
+    private static final String EOL = "\n";
     private static final String PREFS = "csv_prefs";
-    private static final String KEY_CSV_URI = "csv_uri";
+    private static final String KEY_BASE_URI = "base__uri";
+    private static final String KEY_TIMESTAMP_SUFFIX = "timestamp_suffix";
     private static final String FILE_DEFAULT_NAME = "logfile.csv";
-    private static final String CSV_HEADER = "type,timestamp,lat,lon\n";
-
     private final Context context;
     private final ContentResolver contentResolver;
-    private @Nullable Uri csvUri;
+    private final Map<FileType, Uri> csvUris = new EnumMap<>(FileType.class);
+    private final Map<FileType, OutputStreamWriter> openWriters = new EnumMap<>(FileType.class);
+    private Uri baseUri;
+    private String timestampSuffix;
 
     public CsvManager(Context context) {
         this.context = context;
         this.contentResolver = context.getContentResolver();
-        this.csvUri = loadCsvUri();
+        loadAndGenerateURIs();
     }
 
-    // --- Public API ---
-    public void createNewCsvFile(ActivityResultLauncher<String> launcher) {
-        launcher.launch(FILE_DEFAULT_NAME);
+    public String getFileDefaultName() {
+        return FILE_DEFAULT_NAME;
     }
 
     public void handleCreateCsvResult(Uri uri) {
         if (uri != null) {
             takePersistableUriPermission(uri);
-            this.csvUri = uri;
-            saveCsvUri(uri);
-            writeCsvHeaderIfEmpty(uri);
-            Toast.makeText(context, "CSV file location set.", Toast.LENGTH_SHORT).show();
-        }
-    }
+            this.baseUri = uri;
+            this.timestampSuffix = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(new Date());
+            saveSessionInfo(this.baseUri, this.timestampSuffix);
 
-    public void appendEvent(String type, long ts, @Nullable Double lat, @Nullable Double lon) {
-        if (csvUri == null) {
-            Toast.makeText(context, "Choose a CSV location first.", Toast.LENGTH_SHORT).show();
-            // You could add a callback here to ask the Activity to launch the file picker
-            return;
+            generateURIsFromBase();
+            Toast.makeText(context, "CSV files location set.", Toast.LENGTH_SHORT).show();
         }
-        String latStr = (lat == null) ? "" : String.valueOf(lat);
-        String lonStr = (lon == null) ? "" : String.valueOf(lon);
-        String line = type + "," + ts + "," + latStr + "," + lonStr;
-        appendLineToCsv(line);
     }
 
     public boolean isCsvFileChosen() {
-        return csvUri != null;
+        return baseUri != null;
+    }
+
+    public void appendEvent(String type, long ts, @Nullable Double lat, @Nullable Double lon) {
+        String latStr = (lat == null) ? "" : String.valueOf(lat);
+        String lonStr = (lon == null) ? "" : String.valueOf(lon);
+        String line = ts + "," + latStr + "," + lonStr + "," + type;
+        appendLineToCsv(FileType.LABELS, line);
+    }
+
+    public synchronized void appendLineToCsv(@NonNull FileType fileType, @NonNull String line) {
+        try {
+            OutputStreamWriter writer = getWriter(fileType);
+            writer.write(line);
+            writer.write(EOL);
+            writer.flush();
+        } catch (IOException e) {
+            e.printStackTrace();
+            System.err.println("Failed to write to CSV file:" + fileType.getSuffix());
+            close(fileType);
+        }
+    }
+
+    public synchronized void closeAll()
+    {
+        for(Map.Entry<FileType, OutputStreamWriter> entry : openWriters.entrySet())
+        {
+            try {
+                entry.getValue().close();
+            } catch (IOException e) {
+                e.printStackTrace();
+                System.err.println("Failed to close CSV file:" + entry.getKey().getSuffix());
+            }
+        }
+        openWriters.clear();
     }
 
 
     // --- Private Helper Methods ---
-    private void saveCsvUri(Uri uri) {
+    private void saveSessionInfo(Uri uri, String timestampSuffix) {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
-                .putString(KEY_CSV_URI, uri.toString()).apply();
+                .putString(KEY_BASE_URI, uri.toString())
+                .putString(KEY_TIMESTAMP_SUFFIX, timestampSuffix)
+                .apply();
     }
 
-    @Nullable
-    private Uri loadCsvUri() {
+    private void loadAndGenerateURIs() {
         SharedPreferences sp = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
-        String s = sp.getString(KEY_CSV_URI, null);
-        return s == null ? null : Uri.parse(s);
+        String uriString = sp.getString(KEY_BASE_URI, null);
+        String tsString = sp.getString(KEY_TIMESTAMP_SUFFIX, null);
+
+        if(uriString != null && tsString != null) {
+            this.baseUri = Uri.parse(uriString);
+            this.timestampSuffix = tsString;
+            generateURIsFromBase();
+        }
+    }
+
+    private String getCsvFileName(FileType type) {
+        String suffix = type.getSuffix();
+        String timestamp = this.timestampSuffix;
+        return suffix + "_" + timestamp  + ".csv";
+    }
+
+    private void generateURIsFromBase() {
+        if(baseUri == null) return;
+        closeAll();
+        csvUris.clear();
+
+        try {
+            String baseDocumentId = DocumentsContract.getTreeDocumentId(baseUri);
+            Uri parentUri = DocumentsContract.buildDocumentUriUsingTree(baseUri, baseDocumentId);
+
+            for(FileType type: FileType.values()) {
+                String newFileName = getCsvFileName(type);
+                Uri targetUri = DocumentsContract.createDocument(contentResolver, parentUri, "text/csv", newFileName);
+                csvUris.put(type, targetUri);
+                writeCsvHeaderIfEmpty(targetUri, type);
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+            System.err.println("Failed to create derived CSV files");
+        }
     }
 
     private void takePersistableUriPermission(Uri uri) {
@@ -81,23 +148,47 @@ public class CsvManager {
                 uri, Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
     }
 
-    private void writeCsvHeaderIfEmpty(Uri uri) {
+    private void writeCsvHeaderIfEmpty(Uri uri, FileType type) {
         try (InputStream is = contentResolver.openInputStream(uri)) {
             if (is != null && is.available() == 0) {
-                appendLineToCsv(CSV_HEADER.trim()); // Use append to avoid overwriting race condition
+                try (OutputStream os = contentResolver.openOutputStream(uri, "w"); // "w" to overwrite/create
+                     OutputStreamWriter w = new OutputStreamWriter(os)) {
+                    w.write(type.getFileHeader() + EOL);
+                }
             }
-        } catch (IOException ignored) {}
+        } catch (IOException e) {
+            System.err.println("Could not check or write header for " + uri + ". Error: " + e.getMessage());
+        }
     }
 
-    private void appendLineToCsv(String line) {
-        if (csvUri == null) return;
-        try (OutputStream os = contentResolver.openOutputStream(csvUri, "wa");
-             OutputStreamWriter w = new OutputStreamWriter(os)) {
-            w.write(line);
-            if (!line.endsWith("\n")) w.write("\n");
-        } catch (IOException e) {
-            e.printStackTrace();
-            Toast.makeText(context, "Failed to write to CSV.", Toast.LENGTH_SHORT).show();
+    @NonNull
+    private OutputStreamWriter getWriter(FileType fileType) throws IOException {
+        if(openWriters.containsKey(fileType)) {
+            OutputStreamWriter writer = openWriters.get(fileType);
+            if(writer != null) {
+                return writer;
+            }
+        }
+
+        Uri targetUri = csvUris.get(fileType);
+        if (targetUri == null) throw new IOException("CSV file URI for type: " + fileType.name() + " has not been setup.");
+
+        OutputStream os = contentResolver.openOutputStream(targetUri, "wa");
+        if(os == null) throw new IOException("Failed to open output stream for URI: " + targetUri);
+
+        OutputStreamWriter w = new OutputStreamWriter(os);
+        openWriters.put(fileType, w);
+        return w;
+    }
+
+    private synchronized void close(@NonNull FileType fileType) {
+        OutputStreamWriter writer = openWriters.remove(fileType);
+        if (writer != null) {
+            try {
+                writer.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
     }
 }

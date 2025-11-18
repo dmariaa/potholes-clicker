@@ -1,6 +1,8 @@
 package com.example.potholeclickerclient;
 
+import android.Manifest;
 import android.content.Intent;
+import android.net.Uri;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.ImageView;
@@ -12,21 +14,18 @@ import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.PopupMenu;
+import androidx.core.content.ContextCompat;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
+import androidx.lifecycle.ViewModelProvider;
+import androidx.activity.result.contract.ActivityResultContracts.RequestPermission;
 
-import com.example.potholeclickerclient.tools.CsvManager;
-import com.example.potholeclickerclient.tools.LocationManager;
-
-import javax.inject.Inject;
 import dagger.hilt.android.AndroidEntryPoint;
 
 @AndroidEntryPoint
 public class MainActivity extends AppCompatActivity {
-    // Manager classes
-    @Inject protected LocationManager locationManager;
-    @Inject protected CsvManager csvManager;
+    private MainViewModel viewModel;
 
     private TextView deviceName;
     private ImageView playButton;
@@ -37,34 +36,27 @@ public class MainActivity extends AppCompatActivity {
     private TextView manholeCounter;
     private TextView otherCounter;
 
-    // State
-    private boolean isTracking = false;
-    private int potHoleCount = 0;
-    private int speedBumpCount = 0;
-    private int manHoleCount = 0;
-    private int otherCount = 0;
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         EdgeToEdge.enable(this);
+
+        viewModel = new ViewModelProvider(this).get(MainViewModel.class);
+
         setContentView(R.layout.activity_main);
 
         setupViews();
         setupListeners();
+        setupObservers();
 
-        locationManager.requestLocationPermission();
-        if(!csvManager.isCsvFileChosen())
-        {
-            csvManager.createNewCsvFile(createCsvLauncher);
-        }
+        viewModel.onActivityCreated();
     }
 
     private void setupViews() {
         deviceName = findViewById(R.id.deviceName);
         playButton = findViewById(R.id.playButton);
-        frameCounter = findViewById(R.id.frameCounter);
 
+        frameCounter = findViewById(R.id.frameCounter);
         potholeCounter = findViewById(R.id.pothole_counter);
         speedbumpCounter = findViewById(R.id.speedbump_counter); // Assuming you create these IDs
         manholeCounter = findViewById(R.id.manhole_counter);     // in your XML layout for the
@@ -80,19 +72,70 @@ public class MainActivity extends AppCompatActivity {
     private void setupListeners() {
         findViewById(R.id.btnSettings).setOnClickListener(this::showPopupMenu);
 
-        View.OnClickListener l = this::onButtonClick;
-        findViewById(R.id.btnPotHole).setOnClickListener(l);
-        findViewById(R.id.btnSpeedBump).setOnClickListener(l);
-        findViewById(R.id.btnManHole).setOnClickListener(l);
-        findViewById(R.id.btnOther).setOnClickListener(l);
+        // View.OnClickListener l = this::onButtonClick;
+        findViewById(R.id.btnPotHole).setOnClickListener(v -> viewModel.onEventButtonClick(EventType.POTHOLE));
+        findViewById(R.id.btnSpeedBump).setOnClickListener(v -> viewModel.onEventButtonClick(EventType.SPEED_BUMP));
+        findViewById(R.id.btnManHole).setOnClickListener(v -> viewModel.onEventButtonClick(EventType.MANHOLE));
+        findViewById(R.id.btnOther).setOnClickListener(v-> viewModel.onEventButtonClick(EventType.OTHER));
+        findViewById(R.id.playButton).setOnClickListener(v -> viewModel.onPlayStopClick());
+    }
 
-        playButton.setOnClickListener(v -> {
-            if (isTracking) {
+    private void setupObservers() {
+        viewModel.getPotholeCount().observe(this, count -> potholeCounter.setText(String.valueOf(count)));
+        viewModel.getSpeedBumpCount().observe(this, count -> speedbumpCounter.setText(String.valueOf(count)));
+        viewModel.getManholeCount().observe(this, count -> manholeCounter.setText(String.valueOf(count)));
+        viewModel.getOtherCount().observe(this, count -> otherCounter.setText(String.valueOf(count)));
+        viewModel.getFrameCount().observe(this, count -> frameCounter.setText(count + " frames"));
 
-            } else {
 
+        viewModel.getToastMessage().observe(this, message -> {
+            if (message != null) {
+                Toast.makeText(this, message, Toast.LENGTH_SHORT).show();
+                viewModel.onToastShown(); // Reset the event
             }
         });
+
+        viewModel.getLaunchCreateCsvFile().observe(this, shouldLaunch -> {
+            if (shouldLaunch) {
+                // createCsvLauncher.launch(viewModel.getFileDefaultName());
+                createCsvLauncher.launch(null);
+                viewModel.onCsvFileLauncherTriggered(); // Reset the event
+            }
+        });
+
+        viewModel.getRequestLocationPermission().observe(this, shouldRequest -> {
+            if(shouldRequest) {
+                locationPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION);
+                viewModel.onLocationPermissionLauncherTriggered();
+            }
+        });
+
+        viewModel.isPlayButtonEnabled().observe(this, isEnabled -> {
+            if (!isEnabled) {
+                this.playButton.setImageResource(R.drawable.play_disabled);
+                this.playButton.setColorFilter(ContextCompat.getColor(this, android.R.color.holo_red_dark));
+            }
+        });
+
+        viewModel.isTracking().observe(this, isTracking -> {
+            if (isTracking) {
+                this.playButton.setImageResource(R.drawable.stop); // You need to add this drawable
+                this.playButton.setColorFilter(ContextCompat.getColor(this, android.R.color.holo_red_dark));
+            } else {
+                this.playButton.setImageResource(R.drawable.play_enabled);
+                this.playButton.setColorFilter(ContextCompat.getColor(this, R.color.green));
+            }
+        });
+
+        viewModel.getSelectedDeviceName().observe(this, deviceName -> {
+            if(deviceName == null) return;
+            this.deviceName.setText(deviceName);
+            this.playButton.setVisibility(View.VISIBLE);
+            this.frameCounter.setVisibility(View.VISIBLE);
+            this.frameCounter.setText("0 frames");
+            Toast.makeText(this, "Device selected: " + deviceName, Toast.LENGTH_SHORT).show();
+        });
+
     }
 
     private void showPopupMenu(View v) {
@@ -101,7 +144,7 @@ public class MainActivity extends AppCompatActivity {
         popup.setOnMenuItemClickListener(item -> {
             int itemId = item.getItemId();
             if(itemId == R.id.choose_file){
-                csvManager.createNewCsvFile(createCsvLauncher);
+                viewModel.requestNewCsvFile();
             } else if(itemId == R.id.select_device) {
                 Intent intent = new Intent(this, DeviceListActivity.class);
                 deviceListLauncher.launch(intent);
@@ -111,45 +154,10 @@ public class MainActivity extends AppCompatActivity {
         popup.show();
     }
 
-    private void onButtonClick(View v) {
-        long ts = System.currentTimeMillis();
-
-        String type;
-        int id = v.getId();
-        if (id == R.id.btnPotHole) {
-            type = "pothole";
-            potHoleCount++;
-            potholeCounter.setText(String.valueOf(potHoleCount));
-        } else if (id == R.id.btnSpeedBump) {
-            type = "speed_bump";
-            speedBumpCount++;
-            speedbumpCounter.setText(String.valueOf(speedBumpCount));
-        } else if (id == R.id.btnManHole) {
-            type = "manhole";
-            manHoleCount++;
-            manholeCounter.setText(String.valueOf(manHoleCount));
-        } else if (id == R.id.btnOther) {
-            type = "other";
-            otherCount++;
-            otherCounter.setText(String.valueOf(otherCount));
-        }
-        else return;
-
-        locationManager.getCurrentLocation(location -> {
-            Double lat = location != null ? location.getLatitude() : null;
-            Double lon = location != null ? location.getLongitude() : null;
-            csvManager.appendEvent(type, ts, lat, lon);
-
-            if (location == null) {
-                Toast.makeText(this, "Location unavailable; saved without coords.", Toast.LENGTH_SHORT).show();
-            }
-        });
-    }
-
     // ===== Launchers =====
-    private final ActivityResultLauncher<String> createCsvLauncher =
-            registerForActivityResult(new ActivityResultContracts.CreateDocument("text/csv"), uri -> {
-                csvManager.handleCreateCsvResult(uri);
+    private final ActivityResultLauncher<Uri> createCsvLauncher =
+            registerForActivityResult(new ActivityResultContracts.OpenDocumentTree(), uri -> {
+                viewModel.onNewCsvFileCreated(uri);
             });
 
     private final ActivityResultLauncher<Intent> deviceListLauncher =
@@ -160,12 +168,17 @@ public class MainActivity extends AppCompatActivity {
                     String deviceAddress = data.getStringExtra(DeviceListActivity.EXTRA_DEVICE_ADDRESS);
 
                     if (deviceName != null && deviceAddress != null) {
-                        Toast.makeText(this, "Device selected: " + deviceName, Toast.LENGTH_SHORT).show();
-                        this.deviceName.setText(deviceName);
-                        this.playButton.setVisibility(View.VISIBLE);
-                        this.frameCounter.setVisibility(View.VISIBLE);
-                        this.frameCounter.setText("0 frames");
+                        viewModel.onDeviceSelected(deviceName, deviceAddress);
                     }
+                }
+            });
+
+    private final ActivityResultLauncher<String> locationPermissionLauncher =
+            registerForActivityResult(new RequestPermission(), isGranted -> {
+                if (isGranted) {
+                    Toast.makeText(this, "Location permission granted.", Toast.LENGTH_SHORT).show();
+                } else {
+                    Toast.makeText(this, "Location permission denied.", Toast.LENGTH_SHORT).show();
                 }
             });
 }

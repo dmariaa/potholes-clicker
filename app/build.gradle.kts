@@ -22,7 +22,7 @@ android {
     }
 
     hilt {
-        enableAggregatingTask = false
+        enableAggregatingTask = true
     }
 
     buildTypes {
@@ -49,6 +49,10 @@ android {
         viewBinding = true
         buildConfig = true
     }
+
+//    composeOptions {
+//        kotlinCompilerExtensionVersion = "1.5.3"
+//    }
 }
 
 dependencies {
