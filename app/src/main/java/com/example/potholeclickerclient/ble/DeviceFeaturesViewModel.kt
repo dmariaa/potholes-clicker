@@ -34,7 +34,12 @@ class DeviceFeaturesViewModel  @Inject constructor(
         }
     }
 
-    fun stopSensorSubscription() {
+    fun stopSensorSubscription(deviceId: String, features: List<Feature<*>>) {
         notificationJob?.cancel()
+        notificationJob = null
+
+        CoroutineScope(Dispatchers.IO).launch {
+            blueManager.disableFeatures(deviceId, features)
+        }
     }
 }

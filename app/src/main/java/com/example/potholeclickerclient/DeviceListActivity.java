@@ -3,16 +3,12 @@ package com.example.potholeclickerclient;
 import android.Manifest;
 import android.content.Intent;
 import android.content.pm.PackageManager;
-import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
 import android.widget.Toast;
 
-import androidx.activity.result.ActivityResultLauncher;
-import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
-import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
@@ -21,9 +17,6 @@ import androidx.lifecycle.ViewModelProvider;
 import com.example.potholeclickerclient.ble.DeviceListAdapter; // We will create this next
 import com.example.potholeclickerclient.ble.DeviceScanViewModel;
 import com.example.potholeclickerclient.databinding.ActivityDeviceListBinding; // ViewBinding class
-
-import java.util.ArrayList;
-import java.util.List;
 
 import dagger.hilt.android.AndroidEntryPoint;
 

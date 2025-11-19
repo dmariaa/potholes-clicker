@@ -10,6 +10,7 @@ import com.example.potholeclickerclient.tools.CsvManager
 import com.example.potholeclickerclient.tools.FileType
 import com.example.potholeclickerclient.tools.LocationManager
 import com.st.blue_sdk.BlueManager
+import com.st.blue_sdk.features.Feature
 import com.st.blue_sdk.features.FeatureUpdate
 import com.st.blue_sdk.features.acceleration.Acceleration
 import com.st.blue_sdk.features.acceleration.AccelerationInfo
@@ -75,12 +76,11 @@ class MainViewModel @Inject constructor(
 
     private val _isTracking = MutableLiveData<Boolean>(false)
     val isTracking: LiveData<Boolean> = _isTracking
+    private var loggedFeatures: List<Feature<*>> = emptyList()
 
     fun onPlayStopClick() {
         if(_isTracking.value == true) {
-            viewModelScope.launch {
-                stopTracking()
-            }
+            stopTracking()
         } else {
             startTracking()
         }
@@ -88,86 +88,173 @@ class MainViewModel @Inject constructor(
 
     private var trackingJob: Job? = null
 
+//    private fun startTracking(maxConnectionRetries: Int = MAX_RETRY_CONNECTION) {
+//        val deviceId = selectedDeviceAddress.value ?: return
+//
+//        trackingJob?.cancel() // Cancel any previous job
+//        trackingJob = viewModelScope.launch {
+//            var retryCount = 0
+//            _isTracking.postValue(true)
+//
+//            val node = blueManager.getNode(deviceId)
+//
+//            blueManager.connectToNode(deviceId).collect {
+//                val previousNodeState = it.connectionStatus.prev
+//                val currentNodeState = it.connectionStatus.current
+//
+//                Log.d(TAG, "Node state (prev: $previousNodeState - current: $currentNodeState) retryCount: $retryCount")
+//
+//                // We only act when the state newly becomes "Connected"
+//                if (currentNodeState == NodeState.Connected && previousNodeState != NodeState.Connected) {
+//                    Log.d(TAG, "Node is connected. Waiting for service discovery...")
+//                    delay(1000)
+//
+//                    Log.d(TAG, "Discovering features...")
+//                    val allFeatures = blueManager.nodeFeatures(deviceId)
+//
+//                    if (allFeatures.isEmpty()) {
+//                        _toastMessage.postValue("Could not discover device features. Please try again.")
+//                        stopTracking()
+//                        return@collect
+//                    }
+//
+//                    val accelerometer = allFeatures.find { f -> f is Acceleration }
+//                    val gyroscope = allFeatures.find { f -> f is Gyroscope }
+//                    val featuresToLog = listOfNotNull(accelerometer, gyroscope)
+//
+//                    if (featuresToLog.isEmpty()) {
+//                        _toastMessage.postValue("Accelerometer/Gyroscope not found on this device.")
+//                        stopTracking()
+//                        return@collect
+//                    }
+//
+//                    Log.d(TAG, "Found features: ${featuresToLog.map { f -> f.name }.joinToString()}. Starting subscriptions.")
+//                    locationManager.startLocationUpdates()
+//                    deviceFeaturesViewModel.startSensorSubscription(deviceId, featuresToLog) { featureUpdate ->
+//                        val line = formatSensorDataForCsv(featureUpdate)
+//                        line?.let {
+//                            csvManager.appendLineToCsv(
+//                                FileType.fromSensorName(featureUpdate.featureName),
+//                                it)
+//
+//                            if(featureUpdate.featureName == "Accelerometer") {
+//                                _frameCount.postValue((_frameCount.value ?: 0) + 1)
+//                            }
+//                        }
+//                    }
+//                }
+//                else if (previousNodeState == NodeState.Connecting && currentNodeState == NodeState.Disconnected) {
+//                    retryCount++
+//                    if (retryCount > MAX_RETRY_CONNECTION) {
+//                        _toastMessage.postValue("Connection failed after $MAX_RETRY_CONNECTION retries.")
+//                        _isTracking.postValue(false)
+//                        return@collect
+//                    }
+//                    Log.d(TAG, "Connection failed. Retrying...")
+//                    blueManager.connectToNode(deviceId)
+//                }
+//            }
+//        }
+//    }
+
     private fun startTracking(maxConnectionRetries: Int = MAX_RETRY_CONNECTION) {
         val deviceId = selectedDeviceAddress.value ?: return
 
-        trackingJob?.cancel() // Cancel any previous job
-        trackingJob = viewModelScope.launch {
-            var retryCount = 0
-            _isTracking.postValue(true)
+        if(trackingJob == null) {
+            trackingJob = viewModelScope.launch {
+                var retryCount = 0
 
-            blueManager.connectToNode(deviceId).collect {
-                val previousNodeState = it.connectionStatus.prev
-                val currentNodeState = it.connectionStatus.current
+                _isTracking.postValue(true)
 
-                Log.d(TAG, "Node state (prev: $previousNodeState - current: $currentNodeState) retryCount: $retryCount")
+                val node = blueManager.getNode(deviceId)
+                if(node==null) {
+                    _toastMessage.postValue("Device not found. Please re-select.")
+                    _isTracking.postValue(false)
+                    return@launch
+                }
 
-                // We only act when the state newly becomes "Connected"
-                if (currentNodeState == NodeState.Connected && previousNodeState != NodeState.Connected) {
-                    Log.d(TAG, "Node is connected. Waiting for service discovery...")
-                    delay(1000)
+                blueManager.connectToNode(deviceId).collect {
+                    val previousNodeState = it.connectionStatus.prev
+                    val currentNodeState = it.connectionStatus.current
 
-                    Log.d(TAG, "Discovering features...")
-                    val allFeatures = blueManager.nodeFeatures(deviceId)
+                    Log.d(TAG, "Node state (prev: $previousNodeState - current: $currentNodeState")
 
-                    if (allFeatures.isEmpty()) {
-                        _toastMessage.postValue("Could not discover device features. Please try again.")
-                        stopTracking()
-                        return@collect
-                    }
-
-                    val accelerometer = allFeatures.find { f -> f is Acceleration }
-                    val gyroscope = allFeatures.find { f -> f is Gyroscope }
-                    val featuresToLog = listOfNotNull(accelerometer, gyroscope)
-
-                    if (featuresToLog.isEmpty()) {
-                        _toastMessage.postValue("Accelerometer/Gyroscope not found on this device.")
-                        stopTracking()
-                        return@collect
-                    }
-
-                    Log.d(TAG, "Found features: ${featuresToLog.map { f -> f.name }.joinToString()}. Starting subscriptions.")
-                    locationManager.startLocationUpdates()
-                    deviceFeaturesViewModel.startSensorSubscription(deviceId, featuresToLog) { featureUpdate ->
-                        val line = formatSensorDataForCsv(featureUpdate)
-                        line?.let {
-                            csvManager.appendLineToCsv(
-                                FileType.fromSensorName(featureUpdate.featureName),
-                                it)
-
-                            if(featureUpdate.featureName == "Accelerometer") {
-                                _frameCount.postValue((_frameCount.value ?: 0) + 1)
-                            }
+                    if(currentNodeState == NodeState.Connected && previousNodeState != NodeState.Connected) {
+                        Log.d(TAG, "Node is connected. Waiting for service discovery...")
+                        subscribeToFeatures(deviceId);
+                    } else if(currentNodeState == NodeState.Disconnected && previousNodeState == NodeState.Connecting) {
+                        retryCount++
+                        if (retryCount > MAX_RETRY_CONNECTION) {
+                            _toastMessage.postValue("Connection failed after $MAX_RETRY_CONNECTION retries.")
+                            _isTracking.postValue(false)
+                            return@collect
                         }
+                        Log.d(TAG, "Connection failed. Retrying...")
+                        blueManager.connectToNode(deviceId)
+                    } else if(currentNodeState == NodeState.Disconnected && previousNodeState == NodeState.Connected) {
+                        Log.d(TAG, "Node has disconnected.")
+                        stopTracking() // This will update the UI state.
+                        trackingJob?.cancel() // Stop this collector.
+                        trackingJob = null
                     }
                 }
-                else if (previousNodeState == NodeState.Connecting && currentNodeState == NodeState.Disconnected) {
-                    retryCount++
-                    if (retryCount > MAX_RETRY_CONNECTION) {
-                        _toastMessage.postValue("Connection failed after $MAX_RETRY_CONNECTION retries.")
-                        _isTracking.postValue(false)
-                        return@collect
+            }
+        } else {
+            Log.d(TAG, "Connection already open. Re-subscribing to features...")
+            _isTracking.postValue(true)
+            subscribeToFeatures(deviceId)
+        }
+    }
+
+    private fun subscribeToFeatures(deviceId: String) {
+        viewModelScope.launch {
+            delay(1000)
+
+            Log.d(TAG, "Discovering features...")
+            val allFeatures = blueManager.nodeFeatures(deviceId)
+
+            if (allFeatures.isEmpty()) {
+                _toastMessage.postValue("Could not discover device features. Please try again.")
+                stopTracking()
+                return@launch
+            }
+
+            val accelerometer = allFeatures.find { f -> f is Acceleration }
+            val gyroscope = allFeatures.find { f -> f is Gyroscope }
+            loggedFeatures = listOfNotNull(accelerometer, gyroscope)
+
+            if (loggedFeatures.isEmpty()) {
+                _toastMessage.postValue("Accelerometer/Gyroscope not found on this device.")
+                stopTracking()
+                return@launch
+            }
+
+            blueManager.enableFeatures(deviceId, loggedFeatures)
+
+            Log.d(TAG, "Found features: ${loggedFeatures.joinToString { f -> f.name }}. Starting subscriptions.")
+            locationManager.startLocationUpdates()
+            deviceFeaturesViewModel.startSensorSubscription(deviceId, loggedFeatures) { featureUpdate ->
+                val line = formatSensorDataForCsv(featureUpdate)
+                line?.let {
+                    csvManager.appendLineToCsv(
+                    FileType.fromSensorName(featureUpdate.featureName),
+                    it)
+
+                    if(featureUpdate.featureName == "Accelerometer") {
+                        _frameCount.postValue((_frameCount.value ?: 0) + 1)
                     }
-                    Log.d(TAG, "Connection failed. Retrying...")
-                    blueManager.connectToNode(deviceId)
                 }
             }
         }
     }
 
-
     private fun stopTracking() {
         val deviceId = selectedDeviceAddress.value ?: return
 
+        Log.d(TAG, "Stopping tracking sensors...")
         _isTracking.postValue(false)
-
         locationManager.stopLocationUpdates()
-
-        trackingJob?.cancel()
-
-        deviceFeaturesViewModel.stopSensorSubscription()
-
-        blueManager.disconnect(deviceId)
+        deviceFeaturesViewModel.stopSensorSubscription(deviceId, loggedFeatures)
     }
 
     private fun formatSensorDataForCsv(featureUpdate: FeatureUpdate<*>): String? {
