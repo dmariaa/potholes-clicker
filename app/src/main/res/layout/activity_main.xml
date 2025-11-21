@@ -128,6 +128,7 @@
                 android:layout_marginEnd="4dp"
                 android:layout_marginBottom="0dp"
                 android:src="@drawable/play_disabled"
+                android:visibility="invisible"
                 app:cornerRadius="0dp"
                 app:tint="#ff0000" />
         </LinearLayout>
@@ -152,6 +153,7 @@
                 android:layout_weight="1"
                 android:text="0 frames"
                 android:textSize="24sp"
+                android:visibility="invisible"
                 android:textColor="@color/black"
                 android:gravity="center_vertical"
                 />

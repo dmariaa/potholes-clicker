@@ -24,41 +24,19 @@ import java.util.Objects;
 
 public class CsvManager {
     private static final String EOL = "\n";
-    private static final String PREFS = "csv_prefs";
-    private static final String KEY_BASE_URI = "base__uri";
-    private static final String KEY_TIMESTAMP_SUFFIX = "timestamp_suffix";
     private static final String FILE_DEFAULT_NAME = "logfile.csv";
     private final Context context;
     private final ContentResolver contentResolver;
     private final Map<FileType, Uri> csvUris = new EnumMap<>(FileType.class);
     private final Map<FileType, OutputStreamWriter> openWriters = new EnumMap<>(FileType.class);
-    private Uri baseUri;
-    private String timestampSuffix;
 
     public CsvManager(Context context) {
         this.context = context;
         this.contentResolver = context.getContentResolver();
-        loadAndGenerateURIs();
     }
 
     public String getFileDefaultName() {
         return FILE_DEFAULT_NAME;
-    }
-
-    public void handleCreateCsvResult(Uri uri) {
-        if (uri != null) {
-            takePersistableUriPermission(uri);
-            this.baseUri = uri;
-            this.timestampSuffix = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(new Date());
-            saveSessionInfo(this.baseUri, this.timestampSuffix);
-
-            generateURIsFromBase();
-            Toast.makeText(context, "CSV files location set.", Toast.LENGTH_SHORT).show();
-        }
-    }
-
-    public boolean isCsvFileChosen() {
-        return baseUri != null;
     }
 
     public void appendEvent(String type, long ts, @Nullable Double lat, @Nullable Double lon) {
@@ -95,52 +73,55 @@ public class CsvManager {
         openWriters.clear();
     }
 
-
-    // --- Private Helper Methods ---
-    private void saveSessionInfo(Uri uri, String timestampSuffix) {
-        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
-                .putString(KEY_BASE_URI, uri.toString())
-                .putString(KEY_TIMESTAMP_SUFFIX, timestampSuffix)
-                .apply();
-    }
-
-    private void loadAndGenerateURIs() {
-        SharedPreferences sp = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
-        String uriString = sp.getString(KEY_BASE_URI, null);
-        String tsString = sp.getString(KEY_TIMESTAMP_SUFFIX, null);
-
-        if(uriString != null && tsString != null) {
-            this.baseUri = Uri.parse(uriString);
-            this.timestampSuffix = tsString;
-            generateURIsFromBase();
-        }
-    }
-
-    private String getCsvFileName(FileType type) {
+    private String getCsvFileName(FileType type, Date timestamp) {
         String suffix = type.getSuffix();
-        String timestamp = this.timestampSuffix;
-        return suffix + "_" + timestamp  + ".csv";
+        String timestampSuffix = new SimpleDateFormat("yyyyMMdd_HHmmss",
+                Locale.getDefault()).format(timestamp);
+        return suffix + "_" + timestampSuffix  + ".csv";
     }
 
-    private void generateURIsFromBase() {
-        if(baseUri == null) return;
+//    private void generateURIsFromBase() {
+//        if(baseUri == null) return;
+//        closeAll();
+//        csvUris.clear();
+//
+//        try {
+//            String baseDocumentId = DocumentsContract.getTreeDocumentId(baseUri);
+//            Uri parentUri = DocumentsContract.buildDocumentUriUsingTree(baseUri, baseDocumentId);
+//
+//            for(FileType type: FileType.values()) {
+//                String newFileName = getCsvFileName(type);
+//                Uri targetUri = DocumentsContract.createDocument(contentResolver, parentUri, "text/csv", newFileName);
+//                csvUris.put(type, targetUri);
+//                writeCsvHeaderIfEmpty(targetUri, type);
+//            }
+//        } catch (IOException e) {
+//            e.printStackTrace();
+//            System.err.println("Failed to create derived CSV files");
+//        }
+//    }
+
+    public void createSessionFiles(Uri directoryUri, Date timestamp) {
+        takePersistableUriPermission(directoryUri);
         closeAll();
         csvUris.clear();
 
         try {
-            String baseDocumentId = DocumentsContract.getTreeDocumentId(baseUri);
-            Uri parentUri = DocumentsContract.buildDocumentUriUsingTree(baseUri, baseDocumentId);
+            String baseDocumentId = DocumentsContract.getTreeDocumentId(directoryUri);
+            Uri parentUri = DocumentsContract.buildDocumentUriUsingTree(directoryUri, baseDocumentId);
 
             for(FileType type: FileType.values()) {
-                String newFileName = getCsvFileName(type);
+                String newFileName = getCsvFileName(type, timestamp);
                 Uri targetUri = DocumentsContract.createDocument(contentResolver, parentUri, "text/csv", newFileName);
                 csvUris.put(type, targetUri);
                 writeCsvHeaderIfEmpty(targetUri, type);
             }
+            Toast.makeText(context, "CSV session files created", Toast.LENGTH_SHORT).show();
         } catch (IOException e) {
-            e.printStackTrace();
             System.err.println("Failed to create derived CSV files");
+            e.printStackTrace();
         }
+
     }
 
     private void takePersistableUriPermission(Uri uri) {

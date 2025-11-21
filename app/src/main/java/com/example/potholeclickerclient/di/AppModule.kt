@@ -5,6 +5,7 @@ import android.content.Context
 import com.example.potholeclickerclient.ble.DeviceFeaturesViewModel
 import com.example.potholeclickerclient.tools.CsvManager
 import com.example.potholeclickerclient.tools.LocationManager
+import com.example.potholeclickerclient.tools.MetadataManager
 import com.st.blue_sdk.BlueManager
 import dagger.Module;
 import dagger.Provides;
@@ -36,7 +37,9 @@ object AppModule {
 
     @Provides
     @Singleton
-    fun provideDeviceFeaturesViewModel(blueManager: BlueManager) : DeviceFeaturesViewModel {
-        return DeviceFeaturesViewModel(blueManager)
+    fun provideMetadataManager(
+        @ApplicationContext context: Context
+    ): MetadataManager {
+        return MetadataManager(context)
     }
 }

@@ -1,45 +1,90 @@
 package com.example.potholeclickerclient.ble
 
+import android.util.Log
+import androidx.lifecycle.LiveData
+import androidx.lifecycle.MutableLiveData
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.example.potholeclickerclient.state.SessionModel
 import com.st.blue_sdk.BlueManager
-import com.st.blue_sdk.features.Feature
 import com.st.blue_sdk.features.FeatureUpdate
 import com.st.blue_sdk.features.acceleration.Acceleration
 import com.st.blue_sdk.features.gyroscope.Gyroscope
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.merge
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
+import java.util.concurrent.atomic.AtomicInteger
 import javax.inject.Inject
-import javax.inject.Singleton
 
-@Singleton
+
 class DeviceFeaturesViewModel  @Inject constructor(
-    private val blueManager: BlueManager
-) {
-    private var notificationJob: Job? = null
+    private val blueManager: BlueManager,
+    private val sessionModel: SessionModel
+) : ViewModel() {
+    companion object {
+        private val TAG = DeviceFeaturesViewModel::class.simpleName
+    }
+    private var dataReceivedJob: Job? = null
 
-    fun startSensorSubscription(deviceId: String, features: List<Feature<*>>, onDataReceived: (FeatureUpdate<*>) -> Unit) {
-        val flows = mutableListOf<Flow<FeatureUpdate<*>>>()
+    private val _realtimeFrameCounter = AtomicInteger(0)
+    private val _frameCounter = MutableLiveData(0)
+    val frameCounter: LiveData<Int> = _frameCounter
 
-        features.forEach { feature ->
-            flows.add(blueManager.getFeatureUpdates(nodeId = deviceId, features = listOf(feature)))
-        }
+    private val _featureUpdates = MutableLiveData<FeatureUpdate<*>?>(null)
 
-        notificationJob = CoroutineScope(Dispatchers.IO).launch {
-           flows.merge().collect { update ->
-               onDataReceived(update)
-           }
+    val featureUpdates: LiveData<FeatureUpdate<*>?>
+        get() = _featureUpdates
+
+    fun startSensorSubscription(deviceId: String)
+    {
+        if(dataReceivedJob != null) return
+
+        viewModelScope.launch {
+            stopSubscription(deviceId)
+            startSubscription(deviceId)
         }
     }
 
-    fun stopSensorSubscription(deviceId: String, features: List<Feature<*>>) {
-        notificationJob?.cancel()
-        notificationJob = null
-
-        CoroutineScope(Dispatchers.IO).launch {
-            blueManager.disableFeatures(deviceId, features)
+    fun stopSensorSubscription(deviceId: String) {
+        viewModelScope.launch {
+            stopSubscription(deviceId)
         }
+    }
+
+    private fun startSubscription(deviceId: String)
+    {
+        val allFeatures = blueManager.nodeFeatures(deviceId)
+        val acceleration = allFeatures.find { f -> f is Acceleration }
+        val gyroscope = allFeatures.find { f -> f is Gyroscope }
+        val features = listOfNotNull(acceleration, gyroscope)
+
+        dataReceivedJob = blueManager.getFeatureUpdates(nodeId = deviceId, features = features)
+            .flowOn(Dispatchers.IO)
+            .onEach {
+                _featureUpdates.value = it
+
+                if(it.featureName == "Accelerometer") {
+                    sessionModel.setFrameCount(_realtimeFrameCounter.incrementAndGet())
+                }
+            }.launchIn(viewModelScope)
+        Log.d(TAG, "Features subscribed...")
+    }
+
+    private suspend fun stopSubscription(deviceId: String) {
+        dataReceivedJob?.cancelAndJoin()
+        dataReceivedJob = null
+
+        val allFeatures = blueManager.nodeFeatures(deviceId)
+        val acceleration = allFeatures.find { f -> f is Acceleration }
+        val gyroscope = allFeatures.find { f -> f is Gyroscope }
+        val features = listOfNotNull(acceleration, gyroscope)
+
+        blueManager.disableFeatures(nodeId = deviceId, features = features)
+        Log.d(TAG, "Frame counter value: ${_realtimeFrameCounter.get()}")
+        Log.d(TAG, "Features unsubscribed...")
     }
 }

@@ -34,6 +34,7 @@ okhttp = "5.1.0"
 retrofit = "3.0.0"
 retrofitKotlinxSerializationJson = "1.0.0"
 androidxRoom = "2.7.2"
+protoliteWellKnownTypes = "18.0.1"
 
 [libraries]
 # ANDROIDX - CORE & UI
@@ -71,6 +72,7 @@ openid-appauth = { group = "net.openid", name="appauth", version.ref = "appauth"
 androidx-room-compiler = { group = "androidx.room", name="room-compiler", version.ref = "androidxRoom" }
 androidx-room-ktx = { group = "androidx.room", name="room-ktx", version.ref = "androidxRoom" }
 androidx-room-runtime = { group = "androidx.room", name="room-runtime", version.ref = "androidxRoom" }
+protolite-well-known-types = { group = "com.google.firebase", name = "protolite-well-known-types", version.ref = "protoliteWellKnownTypes" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

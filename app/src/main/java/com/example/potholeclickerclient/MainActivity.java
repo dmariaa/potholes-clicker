@@ -81,12 +81,17 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void setupObservers() {
-        viewModel.getPotholeCount().observe(this, count -> potholeCounter.setText(String.valueOf(count)));
-        viewModel.getSpeedBumpCount().observe(this, count -> speedbumpCounter.setText(String.valueOf(count)));
-        viewModel.getManholeCount().observe(this, count -> manholeCounter.setText(String.valueOf(count)));
-        viewModel.getOtherCount().observe(this, count -> otherCounter.setText(String.valueOf(count)));
-        viewModel.getFrameCount().observe(this, count -> frameCounter.setText(count + " frames"));
-
+        viewModel.getSessionModel().getPotholeCount().observe(this, count ->
+                potholeCounter.setText(String.valueOf(count)));
+        viewModel.getSessionModel().getSpeedBumpCount().observe(this, count ->
+                speedbumpCounter.setText(String.valueOf(count)));
+        viewModel.getSessionModel().getManholeCount().observe(this, count ->
+                manholeCounter.setText(String.valueOf(count)));
+        viewModel.getSessionModel().getOtherCount().observe(this, count ->
+                otherCounter.setText(String.valueOf(count)));
+        // viewModel.getDeviceFeaturesViewModel().getFrameCounter().observe(this, count -> frameCounter.setText(getResources().getString(R.string.frame_count, count)));
+        viewModel.getSessionModel().getFrameCount().observe(this, count ->
+                frameCounter.setText(getResources().getString(R.string.frame_count, count)));
 
         viewModel.getToastMessage().observe(this, message -> {
             if (message != null) {
@@ -129,13 +134,9 @@ public class MainActivity extends AppCompatActivity {
 
         viewModel.getSelectedDeviceName().observe(this, deviceName -> {
             if(deviceName == null) return;
-            this.deviceName.setText(deviceName);
-            this.playButton.setVisibility(View.VISIBLE);
-            this.frameCounter.setVisibility(View.VISIBLE);
-            this.frameCounter.setText("0 frames");
+            this.showSensor(deviceName, true);
             Toast.makeText(this, "Device selected: " + deviceName, Toast.LENGTH_SHORT).show();
         });
-
     }
 
     private void showPopupMenu(View v) {
@@ -154,10 +155,24 @@ public class MainActivity extends AppCompatActivity {
         popup.show();
     }
 
+    private void showSensor(String sensorName, boolean show) {
+        if(show) {
+            this.deviceName.setText(sensorName);
+            this.playButton.setVisibility(View.VISIBLE);
+            this.frameCounter.setVisibility(View.VISIBLE);
+            this.frameCounter.setText(getResources().getString(R.string.frame_count, 0));
+        } else {
+            this.deviceName.setText("");
+            this.playButton.setVisibility(View.INVISIBLE);
+            this.frameCounter.setVisibility(View.INVISIBLE);
+            this.frameCounter.setText(getResources().getString(R.string.frame_count, 0));
+        }
+    }
+
     // ===== Launchers =====
     private final ActivityResultLauncher<Uri> createCsvLauncher =
             registerForActivityResult(new ActivityResultContracts.OpenDocumentTree(), uri -> {
-                viewModel.onNewCsvFileCreated(uri);
+                viewModel.onNewFolderSelected(uri);
             });
 
     private final ActivityResultLauncher<Intent> deviceListLauncher =
